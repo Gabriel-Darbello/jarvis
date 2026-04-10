@@ -4,7 +4,7 @@ import tempfile
 import wave
 import numpy as np
 import subprocess
-from processor import transcrever_audio
+from processor import transcrever_audio, falar
 import sounddevice as sd
 from openwakeword.model import Model
 
@@ -83,17 +83,21 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
 
                     texto = transcrever_audio(caminho_audio)
                     try:
-                        print(f"Enviando para o Gemini o seguinte prompt {texto}")
-                        resultado = subprocess.run(
-                            ["gemini", "--yolo", "-p", f"\nComando do usuário: {texto}"],
-                            capture_output=True,
-                            text=True,
-                            timeout=60
-                        )
-                        if resultado.stdout:
-                            print(f"Gemini: {resultado.stdout}")
-                        if resultado.stderr:
-                            print(f"Erro: {resultado.stderr}")
+                        if texto and len(texto.strip()) > 3:
+                            print(f"Enviando para o Gemini o seguinte prompt {texto}")
+                            resultado = subprocess.run(
+                                ["gemini", "--yolo", "-p", f"\nComando do usuário: {texto}"],
+                                capture_output=True,
+                                text=True,
+                                timeout=60
+                            )
+                            if resultado.stdout:
+                                    print(f"Gemini: {resultado.stdout}")
+                                    falar(resultado.stdout)
+                            if resultado.stderr:
+                                print(f"Erro: {resultado.stderr}")
+                        else:
+                                print("Comando muito curto, ignorando...")
                     except subprocess.TimeoutExpired:
                         print("Gemini demorou demais, comando cancelado.")
                     except Exception as e:
