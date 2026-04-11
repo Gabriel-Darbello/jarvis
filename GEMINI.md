@@ -53,3 +53,28 @@
 - Certo: "Abrindo o Firefox agora."
 - Se executou uma ação, confirme em uma frase curta
 - Se precisar dar mais detalhes, priorize o mais importante apenas
+
+## Estrutura de projetos
+- Todos os projetos ficam em ~/programação/
+- Para trabalhar num projeto específico, navegue até ele com cd antes de executar comandos git
+- Exemplo: "enviar modificações do RoadUp" → cd ~/programação/RoadUp && git add . && git commit && git push
+
+## Criando novo projeto
+Quando o usuário pedir para criar um projeto ou repositório, execute SEMPRE essa sequência completa:
+
+1. Criar a pasta e entrar nela:
+   mkdir -p ~/programação/pessoal/NOME && cd ~/programação/pessoal/NOME
+
+2. Iniciar o git:
+   git init
+
+3. Criar o repositório no GitHub:
+   gh repo create NOME --public --source=. --remote=origin
+
+4. Criar o arquivo inicial:
+   echo "# NOME" > README.md
+
+5. Primeiro commit e push:
+   git add . && git commit -m "chore: initial commit" && git push -u origin main
+
+Nunca pule nenhum desses passos. Sempre use o nome exato que o usuário falou.
