@@ -47,6 +47,7 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                 if agora - ultimo_disparo > COOLDOWN:
                     ultimo_disparo = agora
                     print("\nWake word detectada! Pode falar...")
+                    beep()
 
                     frames_gravados = []
                     chunks_silencio = 0
