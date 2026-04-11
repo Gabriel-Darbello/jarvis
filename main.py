@@ -99,13 +99,8 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                         print("Comando não reconhecido.")
                         continue
 
-                    # Detecta o projeto ativo no VSCode
-                    nome_projeto, pasta_projeto = pegar_projeto_ativo()
-
-                    if nome_projeto:
-                        contexto = f"Projeto ativo no VSCode: {nome_projeto}, localizado em {pasta_projeto}."
-                    else:
-                        contexto = "Nenhum projeto identificado no VSCode no momento."
+                    # Detecta o projeto ativo
+                    contexto = pegar_projeto_ativo()
 
                     print(f"Você disse: {texto}")
                     print(f"Contexto: {contexto}")

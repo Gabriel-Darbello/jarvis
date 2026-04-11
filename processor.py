@@ -122,3 +122,51 @@ def beep():
         pygame.time.wait(int(duracao * 1000))
     except Exception as e:
         print(f"Erro no beep: {e}")
+
+def pegar_projeto_ativo():
+    """
+    Usa o xdotool para ler o título da janela ativa do sistema.
+    Detecta VSCode, Obsidian, Firefox e terminal, extraindo contexto relevante.
+    Retorna uma string descrevendo o contexto atual.
+    """
+    try:
+        resultado = subprocess.run(
+            ["xdotool", "getactivewindow", "getwindowname"],
+            capture_output=True,
+            text=True
+        )
+        titulo = resultado.stdout.strip()
+
+        # VSCode — formato: "arquivo - NomeProjeto - Visual Studio Code"
+        if "Visual Studio Code" in titulo:
+            partes = titulo.split(" - ")
+            if len(partes) >= 2:
+                nome_projeto = partes[-2]
+                pasta_projeto = f"~/programação/pessoal/{nome_projeto}"
+                return f"VSCode aberto no projeto '{nome_projeto}' em {pasta_projeto}"
+
+        # Obsidian — formato: "NomeDaNota - NomeDoVault - Obsidian"
+        if "Obsidian" in titulo:
+            partes = titulo.split(" - ")
+            if len(partes) >= 2:
+                nome_nota = partes[0]
+                nome_vault = partes[-2] if len(partes) >= 3 else "vault"
+                return f"Obsidian aberto na nota '{nome_nota}' do vault '{nome_vault}'"
+
+        # Firefox — formato: "Título da Página — Mozilla Firefox"
+        if "Firefox" in titulo or "Mozilla" in titulo:
+            pagina = titulo.replace("— Mozilla Firefox", "").replace("- Mozilla Firefox", "").strip()
+            return f"Firefox aberto em: '{pagina}'"
+
+        # Terminal — formato: "pasta — Terminal" ou "gabriel@machine: ~/pasta"
+        if "Terminal" in titulo or "bash" in titulo:
+            return f"Terminal aberto: '{titulo}'"
+
+        # Qualquer outra janela
+        if titulo:
+            return f"Janela ativa: '{titulo}'"
+
+        return "Nenhuma janela identificada"
+
+    except Exception as e:
+        return f"Erro ao detectar janela: {e}"
