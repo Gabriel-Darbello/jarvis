@@ -104,9 +104,3 @@ def falar(texto):
         print(f"Erro no TTS: {e}")
 
 
-def simular_commit():
-    """
-    Função de simulação para demonstração de commit.
-    """
-    print("Simulando um commit com uma nova função.")
-    return True
