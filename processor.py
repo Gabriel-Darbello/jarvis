@@ -4,6 +4,7 @@ import tempfile
 import subprocess
 import pygame
 import edge_tts
+import numpy as np
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -103,4 +104,21 @@ def falar(texto):
     except Exception as e:
         print(f"Erro no TTS: {e}")
 
+def beep():
+    """Toca um beep curto para confirmar que a gravação foi encerrada."""
+    try:
+        # Gera um tom de 440hz (Lá) por 150ms matematicamente
+        # sem precisar de arquivo de áudio externo
+        sample_rate = 44100
+        duracao = 0.15
+        frequencia = 440
 
+        t = np.linspace(0, duracao, int(sample_rate * duracao))
+        onda = (np.sin(2 * np.pi * frequencia * t) * 32767).astype(np.int16)
+        onda_stereo = np.column_stack([onda, onda])
+
+        som = pygame.sndarray.make_sound(onda_stereo)
+        som.play()
+        pygame.time.wait(int(duracao * 1000))
+    except Exception as e:
+        print(f"Erro no beep: {e}")

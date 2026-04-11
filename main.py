@@ -4,7 +4,7 @@ import tempfile
 import wave
 import numpy as np
 import subprocess
-from processor import transcrever_audio, pegar_projeto_ativo, falar
+from processor import transcrever_audio, pegar_projeto_ativo, falar, beep
 import sounddevice as sd
 from openwakeword.model import Model
 
@@ -68,6 +68,7 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
 
                             if chunks_silencio >= CHUNKS_SILENCIO:
                                 print("Silêncio detectado, encerrando gravação.")
+                                beep()
                                 break
 
                     # Junta todos os pedaços numa array só
@@ -116,7 +117,7 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                             ["gemini", "--yolo", "-p", prompt],
                             capture_output=True,
                             text=True,
-                            timeout=60,
+                            timeout=120,
                             env=os.environ.copy()
                         )
 
