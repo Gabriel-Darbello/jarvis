@@ -116,7 +116,8 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                     try:
                         resultado = subprocess.run(
                             ["gemini", "--yolo", "-p", prompt],
-                            capture_output=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
                             text=True,
                             timeout=120,
                             env=os.environ.copy()
@@ -128,9 +129,6 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                           print(f"Gemini: {resposta}")
                           falar(resposta)
                           salvar_memoria(texto, resposta, contexto)
-
-                        if resultado.stderr:
-                            print(f"Erro: {resultado.stderr}")
 
                     except subprocess.TimeoutExpired:
                         mensagem = "O comando demorou demais e foi cancelado."

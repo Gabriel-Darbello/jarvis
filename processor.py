@@ -162,7 +162,7 @@ def salvar_memoria(comando, resposta, contexto):
 
         # Salva no diário do dia
         arquivo_diario = DIARIO_PATH / f"{data_hoje}.md"
-        entrada_diario = f"\n### {hora_agora}\n**Contexto:** {contexto}\n**Comando:** {comando}\n**Resultado:** {resposta}\n"
+        entrada_diario = f"\n### {hora_agora}\n- **Contexto:** {contexto}\n- **Comando Recebido:** {comando}\n- **Execução:**\n{resposta}\n"
 
         with open(arquivo_diario, "a", encoding="utf-8") as f:
             if not arquivo_diario.exists() or arquivo_diario.stat().st_size == 0:
