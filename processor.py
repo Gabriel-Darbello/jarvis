@@ -4,9 +4,12 @@ import tempfile
 import subprocess
 import pygame
 import edge_tts
+import json
 import numpy as np
 from groq import Groq
 from dotenv import load_dotenv
+from datetime import datetime
+from pathlib import Path
 
 # Carrega as variáveis do arquivo .env
 load_dotenv()
@@ -19,6 +22,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Cria o cliente Groq uma vez e reutiliza em todas as chamadas
 client = Groq(api_key=GROQ_API_KEY)
+
+# Caminho do vault do obsidian para memoria
+VAULT_PATH = Path.home() / "programação/pessoal/vault-ia"
+PROJETOS_PATH = VAULT_PATH / "AI/memoria/projetos"
+DIARIO_PATH = VAULT_PATH / "AI/memoria/diario"
 
 
 def transcrever_audio(caminho_arquivo):
@@ -38,35 +46,6 @@ def transcrever_audio(caminho_arquivo):
     except Exception as e:
         print(f"Erro na transcrição: {e}")
         return None
-
-
-def pegar_projeto_ativo():
-    """
-    Usa o xdotool para ler o título da janela ativa do sistema.
-    Se for o VSCode, extrai o nome do projeto e monta o caminho.
-    Retorna (nome_projeto, pasta_projeto) ou (None, None).
-    """
-    try:
-        resultado = subprocess.run(
-            ["xdotool", "getactivewindow", "getwindowname"],
-            capture_output=True,
-            text=True
-        )
-        titulo = resultado.stdout.strip()
-
-        # Formato do título do VSCode: "arquivo - NomeProjeto - Visual Studio Code"
-        if "Visual Studio Code" in titulo:
-            partes = titulo.split(" - ")
-            if len(partes) >= 2:
-                # O nome do projeto é sempre o penúltimo item
-                nome_projeto = partes[-2]
-                pasta_projeto = f"~/programação/pessoal/{nome_projeto}"
-                return nome_projeto, pasta_projeto
-
-        return None, None
-    except:
-        return None, None
-
 
 async def _falar_async(texto):
     """
@@ -170,3 +149,78 @@ def pegar_projeto_ativo():
 
     except Exception as e:
         return f"Erro ao detectar janela: {e}"
+
+def salvar_memoria(comando, resposta, contexto):
+    """
+    Salva o que foi feito no diário do dia e no arquivo do projeto relevante.
+    Chamado automaticamente após cada comando executado.
+    """
+    try:
+        agora = datetime.now()
+        data_hoje = agora.strftime("%Y-%m-%d")
+        hora_agora = agora.strftime("%H:%M")
+
+        # Salva no diário do dia
+        arquivo_diario = DIARIO_PATH / f"{data_hoje}.md"
+        entrada_diario = f"\n### {hora_agora}\n**Contexto:** {contexto}\n**Comando:** {comando}\n**Resultado:** {resposta}\n"
+
+        with open(arquivo_diario, "a", encoding="utf-8") as f:
+            if not arquivo_diario.exists() or arquivo_diario.stat().st_size == 0:
+                f.write(f"# Diário {data_hoje}\n")
+            f.write(entrada_diario)
+
+        # Detecta qual projeto foi tocado e atualiza o arquivo do projeto
+        projeto = extrair_projeto_do_contexto(contexto)
+        if projeto:
+            atualizar_projeto(projeto, comando, resposta, hora_agora)
+
+    except Exception as e:
+        print(f"Erro ao salvar memória: {e}")
+
+
+def extrair_projeto_do_contexto(contexto):
+    """
+    Extrai o nome do projeto do contexto da janela ativa.
+    """
+    # Se tiver VSCode aberto num projeto
+    if "VSCode aberto no projeto" in contexto:
+        partes = contexto.split("'")
+        if len(partes) >= 2:
+            return partes[1]
+
+    # Palavras-chave comuns nos comandos
+    projetos_conhecidos = ["RoadUp", "Assistente-gemini", "assistente"]
+    for projeto in projetos_conhecidos:
+        if projeto.lower() in contexto.lower():
+            return projeto
+
+    return None
+
+
+def atualizar_projeto(projeto, comando, resposta, hora):
+    """
+    Atualiza o arquivo de memória do projeto com o que foi feito.
+    Cria o arquivo se não existir.
+    """
+    arquivo_projeto = PROJETOS_PATH / f"{projeto}.md"
+
+    # Cria o arquivo do projeto se não existir
+    if not arquivo_projeto.exists():
+        with open(arquivo_projeto, "w", encoding="utf-8") as f:
+            f.write(f"# {projeto}\n\n## Sobre o Projeto\n_Preencher_\n\n## Stack\n_Preencher_\n\n## Histórico de Ações\n")
+
+    # Adiciona a ação no histórico
+    entrada = f"\n- **{hora}** — {comando} → {resposta[:100]}{'...' if len(resposta) > 100 else ''}"
+    with open(arquivo_projeto, "a", encoding="utf-8") as f:
+        f.write(entrada)
+
+
+def carregar_contexto_projeto(projeto):
+    """
+    Lê o arquivo de memória do projeto pra passar como contexto pro Gemini.
+    Retorna string vazia se não existir.
+    """
+    arquivo_projeto = PROJETOS_PATH / f"{projeto}.md"
+    if arquivo_projeto.exists():
+        return arquivo_projeto.read_text(encoding="utf-8")
+    return ""

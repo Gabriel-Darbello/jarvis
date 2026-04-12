@@ -4,7 +4,7 @@ import tempfile
 import wave
 import numpy as np
 import subprocess
-from processor import transcrever_audio, pegar_projeto_ativo, falar, beep
+from processor import transcrever_audio, pegar_projeto_ativo, falar, beep, salvar_memoria, carregar_contexto_projeto
 import sounddevice as sd
 from openwakeword.model import Model
 
@@ -102,12 +102,17 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                     # Detecta o projeto ativo
                     contexto = pegar_projeto_ativo()
 
-                    print(f"Você disse: {texto}")
-                    print(f"Contexto: {contexto}")
+                    # carrega memória do projeto se tiver
+                    memoria_projeto = ""
+                    if "VSCode aberto no projeto" in contexto:
+                        nome = contexto.split("'")[1]
+                        memoria_projeto = carregar_contexto_projeto(nome)
 
-                    # Monta o prompt completo e envia ao Gemini CLI
-                    prompt = f"Contexto: {contexto}\n\nComando: {texto}"
-
+                    # monta prompt com memória
+                    if memoria_projeto:
+                        prompt = f"Contexto atual: {contexto}\n\nMemória do projeto:\n{memoria_projeto}\n\nComando: {texto}"
+                    else:
+                        prompt = f"Contexto: {contexto}\n\nComando: {texto}"
                     try:
                         resultado = subprocess.run(
                             ["gemini", "--yolo", "-p", prompt],
@@ -120,8 +125,9 @@ with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream
                         resposta = resultado.stdout.strip() if resultado.stdout else ""
 
                         if resposta:
-                            print(f"Gemini: {resposta}")
-                            falar(resposta)
+                          print(f"Gemini: {resposta}")
+                          falar(resposta)
+                          salvar_memoria(texto, resposta, contexto)
 
                         if resultado.stderr:
                             print(f"Erro: {resultado.stderr}")
