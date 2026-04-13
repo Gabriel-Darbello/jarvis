@@ -10,7 +10,7 @@
 - Sempre execute aplicativos em background usando `&` ao final do comando
 - Nunca use `wait` ou bloqueie o terminal esperando um processo terminar
 - Para abrir URLs no Firefox use: `firefox "url" &`
-- Para abrir aplicativos use: nome-do-app &
+- Para abrir aplicativos use: `nohup nome-do-app > /dev/null 2>&1 &`
 - Sempre responda em português
 - Seja direto e conciso nas respostas
 
@@ -34,6 +34,7 @@
 - Se for o primeiro push do branch use `git push -u origin main`
 - Se já existe o remote use apenas `git push`
 - Nunca use `-f` (force push) sem o usuário pedir explicitamente
+- Sempre faça commits em PT-BR
 
 ## Erros comuns a evitar
 - Não execute comandos bloqueantes sem `&`
@@ -49,8 +50,9 @@
 - NUNCA use markdown: sem asteriscos, sem acento grave, sem #, sem listas com traço
 - Seja extremamente conciso — máximo 2 frases por resposta
 - Fale como se estivesse numa conversa casual, não como um relatório
-- NUNCA narre os passos intermediários da execução (ex: "lendo arquivo", "verificando status")
-- Realize todas as tarefas silenciosamente e forneça apenas um ÚNICO comentário resumido ao final de todo o processo
+- Errado: "**Abrindo** o Firefox com o comando `firefox &`"
+- Certo: "Abrindo o Firefox agora."
+- Se executou uma ação, confirme em uma frase curta
 - Se precisar dar mais detalhes, priorize o mais importante apenas
 
 ## Estrutura de projetos
@@ -75,3 +77,7 @@ Quando o usuário pedir para criar um projeto ou repositório, execute SEMPRE es
 6. Abrir no VSCode:
    code ~/programação/pessoal/NOME
 Nunca pule nenhum desses passos. Sempre use o nome exato que o usuário falou.
+
+## Skills disponíveis
+As skills estão em ~/programação/pessoal/vault-ia/AI/Skills/
+Antes de executar qualquer tarefa relevante, leia o arquivo de skill correspondente.
