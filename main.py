@@ -1,12 +1,18 @@
+# main.py
 import os
 import time
 import tempfile
 import wave
+import random
 import numpy as np
 import subprocess
-from processor import transcrever_audio, pegar_projeto_ativo, falar, beep
+from processor import transcrever_audio, pegar_projeto_ativo, falar, beep, salvar_memoria, carregar_contexto_projeto
 import sounddevice as sd
 from openwakeword.model import Model
+
+# Fix vital para o systemd conseguir abrir janelas gráficas
+os.environ['DISPLAY'] = ':0'
+os.environ['XAUTHORITY'] = os.path.expanduser('~/.Xauthority')
 
 # Frequência de amostragem padrão para reconhecimento de voz
 SAMPLE_RATE = 16000
@@ -14,12 +20,15 @@ SAMPLE_RATE = 16000
 CHUNK_SIZE = 1280
 
 # Configurações de detecção de silêncio
-LIMITE_SILENCIO = 500       # Volume abaixo disso é considerado silêncio
-SEGUNDOS_SILENCIO = 1.5     # Segundos em silêncio para encerrar gravação
+LIMITE_SILENCIO = 500
+SEGUNDOS_SILENCIO = 1.5
 CHUNKS_SILENCIO = int((SAMPLE_RATE / CHUNK_SIZE) * SEGUNDOS_SILENCIO)
 
 # Tempo mínimo entre ativações para evitar disparos repetidos
 COOLDOWN = 3
+
+# Frases de ativação aleatórias
+FRASES_ATIVACAO = ["Sim, mestre", "Ouvindo", "Pode falar", "À disposição"]
 
 print("Carregando modelos...")
 model = Model()
@@ -27,124 +36,164 @@ print("Assistente iniciado. Diga 'Hey Jarvis'...")
 
 ultimo_disparo = 0
 
+
+def capturar_comando(segundos_silencio=1.5):
+    """
+    Função reutilizável que grava áudio até detectar silêncio.
+    Usada tanto na ativação normal quanto na escuta ativa após perguntas.
+    Retorna o texto transcrito ou None se não captou nada útil.
+    """
+    chunks_silencio_local = int((SAMPLE_RATE / CHUNK_SIZE) * segundos_silencio)
+    frames_gravados = []
+    chunks_silencio = 0
+
+    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as mic:
+        while True:
+            chunk, _ = mic.read(CHUNK_SIZE)
+            frames_gravados.append(chunk.copy())
+
+            # RMS — mede o volume do pedaço atual
+            volume = np.sqrt(np.mean(chunk.astype(np.float32) ** 2))
+
+            if volume < LIMITE_SILENCIO:
+                chunks_silencio += 1
+            else:
+                chunks_silencio = 0
+
+            if chunks_silencio >= chunks_silencio_local:
+                beep()
+                break
+
+    gravacao = np.concatenate(frames_gravados, axis=0)
+    duracao = len(gravacao) / SAMPLE_RATE
+
+    if duracao < 1.0:
+        print("Ruído detectado, ignorando...")
+        return None
+
+    # Salva o .wav temporário
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        caminho_audio = tmp.name
+
+    with wave.open(caminho_audio, 'wb') as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(SAMPLE_RATE)
+        wav_file.writeframes(gravacao.tobytes())
+
+    texto = transcrever_audio(caminho_audio)
+    os.remove(caminho_audio)
+    return texto
+
+
+def processar_comando(texto, contexto):
+    """
+    Envia o comando pro Gemini CLI e retorna a resposta.
+    Trata erros de quota de forma amigável.
+    """
+    # Carrega memória do projeto se tiver VSCode aberto
+    memoria_projeto = ""
+    if "VSCode aberto no projeto" in contexto:
+        nome = contexto.split("'")[1]
+        memoria_projeto = carregar_contexto_projeto(nome)
+
+    # Monta prompt com ou sem memória
+    if memoria_projeto:
+        prompt = f"Contexto atual: {contexto}\n\nMemória do projeto:\n{memoria_projeto}\n\nComando: {texto}"
+    else:
+        prompt = f"Contexto: {contexto}\n\nComando: {texto}"
+
+    try:
+        resultado = subprocess.run(
+            ["gemini", "--yolo", "-p", prompt],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=os.environ.copy()
+        )
+
+        # Filtra erros de quota antes de qualquer coisa
+        stderr = resultado.stderr or ""
+        if any(x in stderr for x in ["QuotaError", "429", "exhausted"]):
+            return "Mestre, atingimos o limite de uso do Gemini. Vamos aguardar um pouco."
+
+        # Pega só a última linha não vazia — é o resumo final
+        linhas = [l.strip() for l in resultado.stdout.strip().splitlines() if l.strip()]
+        return linhas[-1] if linhas else ""
+
+    except subprocess.TimeoutExpired:
+        return "O comando demorou demais e foi cancelado."
+    except Exception as e:
+        print(f"Erro ao executar comando: {e}")
+        return ""
+
+
 # Loop principal — fica escutando continuamente o microfone
 with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as stream:
     while True:
         # Lê um pedaço de áudio do microfone
         audio_chunk, _ = stream.read(CHUNK_SIZE)
-        # np.squeeze remove dimensões desnecessárias: (1280,1) → (1280,)
         audio_data = np.squeeze(audio_chunk)
 
-        # Verifica se a wake word foi detectada nesse pedaço
+        # Verifica se a wake word foi detectada
         prediction = model.predict(audio_data)
 
         for wake_word, score in prediction.items():
-            # Só ativa se a confiança for maior que 50%
             if score > 0.5:
                 agora = time.time()
 
-                # Cooldown evita ativar múltiplas vezes na mesma fala
                 if agora - ultimo_disparo > COOLDOWN:
                     ultimo_disparo = agora
-                    print("\nWake word detectada! Pode falar...")
-                    beep()
+                    print("\nWake word detectada!")
 
-                    frames_gravados = []
-                    chunks_silencio = 0
+                    # Responde com frase aleatória
+                    falar(random.choice(FRASES_ATIVACAO))
 
-                    # Grava o comando até detectar silêncio
-                    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16') as mic:
-                        while True:
-                            chunk, _ = mic.read(CHUNK_SIZE)
-                            frames_gravados.append(chunk.copy())
+                    # Aguarda o eco da voz do Jarvis sumir antes de gravar
+                    time.sleep(0.8)
 
-                            # RMS — mede o volume do pedaço atual
-                            volume = np.sqrt(np.mean(chunk.astype(np.float32) ** 2))
-
-                            if volume < LIMITE_SILENCIO:
-                                chunks_silencio += 1
-                            else:
-                                # Ainda tá falando — reseta o contador
-                                chunks_silencio = 0
-
-                            if chunks_silencio >= CHUNKS_SILENCIO:
-                                print("Silêncio detectado, encerrando gravação.")
-                                beep()
-                                break
-
-                    # Junta todos os pedaços numa array só
-                    gravacao = np.concatenate(frames_gravados, axis=0)
-                    duracao = len(gravacao) / SAMPLE_RATE
-
-                    # Ignora gravações muito curtas (provavelmente ruído)
-                    if duracao < 1.0:
-                        print("Ruído detectado, ignorando...")
-                        continue
-
-                    # Salva o áudio num arquivo .wav temporário
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                        caminho_audio = tmp.name
-
-                    with wave.open(caminho_audio, 'wb') as wav_file:
-                        wav_file.setnchannels(1)      # mono
-                        wav_file.setsampwidth(2)      # 16 bits = 2 bytes
-                        wav_file.setframerate(SAMPLE_RATE)
-                        wav_file.writeframes(gravacao.tobytes())
-
-                    # Transcreve o áudio para texto via Groq Whisper
-                    texto = transcrever_audio(caminho_audio)
-                    os.remove(caminho_audio)
+                    print("Pode falar...")
+                    texto = capturar_comando()
 
                     if not texto or len(texto.strip()) < 3:
                         print("Comando não reconhecido.")
                         continue
 
-                    # Detecta o projeto ativo no VSCode
-                    nome_projeto, pasta_projeto = pegar_projeto_ativo()
-
-                    if nome_projeto:
-                        contexto = f"Projeto ativo no VSCode: {nome_projeto}, localizado em {pasta_projeto}."
-                    else:
-                        contexto = "Nenhum projeto identificado no VSCode no momento."
-
                     print(f"Você disse: {texto}")
+
+                    contexto = pegar_projeto_ativo()
                     print(f"Contexto: {contexto}")
 
-                    # Monta o prompt completo e envia ao Gemini CLI
-                    prompt = f"Contexto: {contexto}\n\nComando: {texto}"
+                    resposta = processar_comando(texto, contexto)
 
-                    try:
-                        resultado = subprocess.run(
-                            ["gemini", "--yolo", "-p", prompt],
-                            capture_output=True,
-                            text=True,
-                            timeout=120,
-                            env=os.environ.copy()
-                        )
+                    if resposta:
+                        print(f"Gemini: {resposta}")
+                        falar(resposta)
+                        salvar_memoria(texto, resposta, contexto)
 
-                        resposta = resultado.stdout.strip() if resultado.stdout else ""
+                        # Escuta ativa se terminar com pergunta
+                        if resposta.strip().endswith("?"):
+                            print("Escuta ativa — aguardando resposta...")
+                            time.sleep(0.8)
+                            texto_resposta = capturar_comando(segundos_silencio=3)
 
-                        if resposta:
-                            print(f"Gemini: {resposta}")
-                            falar(resposta)
+                            if texto_resposta and len(texto_resposta.strip()) > 3:
+                                print(f"Resposta: {texto_resposta}")
+                                contexto_followup = f"{contexto} | Pergunta anterior: {resposta}"
+                                resposta_followup = processar_comando(texto_resposta, contexto_followup)
 
-                        if resultado.stderr:
-                            print(f"Erro: {resultado.stderr}")
-
-                    except subprocess.TimeoutExpired:
-                        mensagem = "O comando demorou demais e foi cancelado."
-                        print(mensagem)
-                        falar(mensagem)
-                    except Exception as e:
-                        print(f"Erro ao executar comando: {e}")
+                                if resposta_followup:
+                                    print(f"Gemini: {resposta_followup}")
+                                    falar(resposta_followup)
+                                    salvar_memoria(texto_resposta, resposta_followup, contexto)
+                            else:
+                                print("Nenhuma resposta captada, cancelando escuta ativa.")
 
                     ultimo_disparo = time.time()
 
-                    # Limpa o buffer do microfone acumulado durante o processamento
+                    # Limpa o buffer do microfone
                     while stream.read_available > 0:
                         stream.read(stream.read_available)
 
-                    # Reseta o estado interno do modelo de wake word
                     model.reset()
-
                     print("\nPronto para o próximo comando...")
