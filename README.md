@@ -165,7 +165,7 @@ Exemplo de estrutura:
 - [ ] Gravação e detecção de silêncio
 - [ ] Transcrição via Groq Whisper
 - [ ] Loop agêntico com Groq LLaMA
-- [ ] Execução de comandos via subprocess
+- [x] Execução de comandos via subprocess
 - [ ] Confirmação de comandos destrutivos
 - [ ] Resposta em voz com edge-tts
 - [ ] Jarvis.md como contexto persistente
