@@ -8,13 +8,13 @@ async def speak(message):
   # Voz definida
   VOICE = "pt-BR-AntonioNeural"
   # Arquivo de audio temporario
-  OUTPUT_FILE = "audio.mp3"
+  OUTPUT_FILE = "temp/audio.mp3"
 
   # Envia o texto e a voz para a nuvem
   communicate = edge_tts.Communicate(TEXT, VOICE)
   # Salva em um arquivo audio.mp3
   await communicate.save(OUTPUT_FILE)
   # Executa o audio utilizando o programa mpg123 que toca audios via terminal
-  subprocess.run(["mpg123", "audio.mp3"])
+  subprocess.run(["mpg123", "temp/audio.mp3"])
   # Apaga o audio
-  os.remove("audio.mp3")
+  os.remove("temp/audio.mp3")

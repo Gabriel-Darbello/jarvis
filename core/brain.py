@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # cria a função agent que recebe o userMessage
 def agent(userMessage):
   load_dotenv() # carrega o .env
-  instructions = open("Jarvis.md").read() #lê o Jarvis.md
+  instructions = open("../Jarvis.md").read() #lê o Jarvis.md
   client = Groq(api_key=os.environ.get("GROQ_API_KEY")) # inicia o Groq utilizando a API
   # cria um array messages que contém as mensagens que o Groq recebe, no caso instruções e user message
   messages = [
