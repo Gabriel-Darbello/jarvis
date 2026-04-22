@@ -49,18 +49,17 @@ def agent(userMessage):
         }
       )
 
-      # se o processo estiver finalizado encerra o loop e retorna a resposta final
-      if response["finished"]:
+      # executa ação e salva o resultado
+      if response.get("action"):
+        print(f"Executando: {response["action"]}")
+        result = execute_action(response["action"])
+        messages.append({ "role": "user", "content": result})
+
+      if response.get("finished"):
         return response
-      else:
-        # caso contrario executa as ações e adiciona a mensagens
-        action = execute_action(response["action"])
-        messages.append(
-          {
-            "role": "user",
-            "content": action
-          }
-        )
+
+      if not response.get("action"):
+        messages.append({"role": "user", "content": "Você não terminou a tarefa e não enviou uma ação. O que deve ser feito agora?"})
     except:
     # caso ocorra algum erro ocorra devido estrutura do json envia um aviso para o Groq e continua o loop
       messages.append({
