@@ -4,7 +4,7 @@ import edge_tts, os, subprocess
 # Cria a função speak que recebe um dicionario python
 async def speak(message):
   # Primeira letra da mensagem do Groq + mensagem completa devido atraso na fala
-  TEXT = message["message"][0] + message["message"]
+  TEXT = message[0] + message
   # Voz definida
   VOICE = "pt-BR-AntonioNeural"
   # Arquivo de audio temporario

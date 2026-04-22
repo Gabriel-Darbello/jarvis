@@ -167,8 +167,8 @@ Exemplo de estrutura:
 - [ ] Loop agêntico com Groq LLaMA
 - [x] Execução de comandos via subprocess
 - [ ] Confirmação de comandos destrutivos
-- [ ] Resposta em voz com edge-tts
-- [ ] Jarvis.md como contexto persistente
+- [x] Resposta em voz com edge-tts
+- [x] Jarvis.md como contexto persistente
 
 ### V2 — Futuro
 - [ ] Sistema de skills modulares
