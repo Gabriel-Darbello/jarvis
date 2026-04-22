@@ -1,22 +1,20 @@
 # importa subprocess para executar comandos do sistema e json para manipular dados em formato JSON
 import subprocess, json
 
-# Função para executar uma ação recebida em formato JSON
+# Função para executar uma ação recebida em dicionario python
 def execute_action(action):
   try:
-    # Converte o json recebido em um dicionário Python
-    response = json.loads(action)
     # Verifica se a ação é destrutiva e solicita confirmação do usuário
-    if response["destructive"]:
+    if action["destructive"]:
       confirm = input("A ação é destrutiva. Tem certeza que deseja continuar? (S/n): ")
       if confirm.lower() != 's':
         return "Execução cancelada."
 
     # Executa o comando especificado no JSON usando subprocess.run
     result = subprocess.run(
-      response["command"],
+      action["command"],
       shell=True,
-      cwd=response["cwd"],
+      cwd=action["cwd"],
       capture_output=True,
       text=True
     )
