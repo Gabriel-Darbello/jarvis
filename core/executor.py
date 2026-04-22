@@ -1,5 +1,5 @@
 # importa subprocess para executar comandos do sistema e json para manipular dados em formato JSON
-import subprocess, json
+import subprocess
 
 # Função para executar uma ação recebida em dicionario python
 def execute_action(action):
