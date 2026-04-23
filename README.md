@@ -170,7 +170,7 @@ Exemplo de estrutura:
 - [x] Resposta em voz com edge-tts
 - [x] Jarvis.md como contexto persistente
 
- ### V2 — Futuro
+ ### V2 — Controle e leitura de interfaces gráficas
 
 - [ ] Sistema de skills modulares
 - [ ] Modo offline com modelo local (fallback)
