@@ -56,6 +56,8 @@ def agent(userMessage):
         messages.append({ "role": "user", "content": result})
 
       if response.get("finished"):
+        # reseta a lista de mensagens para o estado anterior para reduzir consumo de tokens
+        messages[:] = [messages[0]]
         return response
 
       if not response.get("action"):
