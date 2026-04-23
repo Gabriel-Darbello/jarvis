@@ -163,19 +163,20 @@ Exemplo de estrutura:
 - [x] Arquitetura definida
 - [ ] Wake word com OpenWakeWord
 - [ ] Gravação e detecção de silêncio
-- [ ] Transcrição via Groq Whisper
-- [ ] Loop agêntico com Groq LLaMA
+- [x] Transcrição via Groq Whisper
+- [x] Loop agêntico com Groq LLaMA
 - [x] Execução de comandos via subprocess
-- [ ] Confirmação de comandos destrutivos
+- [ ] Confirmação de comandos destrutivos por voz
 - [x] Resposta em voz com edge-tts
 - [x] Jarvis.md como contexto persistente
 
-### V2 — Futuro
+ ### V2 — Futuro
+
 - [ ] Sistema de skills modulares
-- [ ] Memória de longo prazo (histórico de sessões)
-- [ ] Controle de janelas avançado (wmctrl / xdotool)
-- [ ] Integração com Spotify / players de mídia
 - [ ] Modo offline com modelo local (fallback)
+- [ ] Controle de janelas avançado (wmctrl / xdotool)
+- [ ] Controle de mouse utilizando automações como pyautogui ou outras coisas
+- [ ] Leitura da tela do computador para ler erros, entender imagens e etc
 
 ---
 
