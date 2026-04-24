@@ -104,9 +104,9 @@ def listen():
                         prediction = {}
                         # abre e fecha automaticamente a criação de um arquivo wav com o apelido wf
                         # ele inicia o objeto que vai ser criado com caminho e modo de abertura
-                        with wave.open("temp/comand.wav", "wb") as wf:
+                        with wave.open("temp/command.wav", "wb") as wf:
                             wf.setnchannels(1) # define no wf quantos canais no caso mono
                             wf.setsampwidth(2) # define no wf a largura da amostra em bytes em 2 bytes que equivale a 16bits
                             wf.setframerate(sample_rate) # define no wf a taxa de amostragem no caso 16kHz
                             wf.writeframes(b"".join(frames_command)) # define no wf conteudo do audio pegando os frames
-                        return "temp/comand.wav"
+                        return "temp/command.wav"
