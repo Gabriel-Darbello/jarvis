@@ -109,8 +109,4 @@ def listen():
                             wf.setsampwidth(2) # define no wf a largura da amostra em bytes em 2 bytes que equivale a 16bits
                             wf.setframerate(sample_rate) # define no wf a taxa de amostragem no caso 16kHz
                             wf.writeframes(b"".join(frames_command)) # define no wf conteudo do audio pegando os frames
-                        print("Áudio salvo em temp/comand.wav!")
                         return "temp/comand.wav"
-
-
-listen()

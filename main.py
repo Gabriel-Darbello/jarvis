@@ -1,19 +1,19 @@
 import asyncio
 from core.brain import agent
 from core.speaker import speak
+from core.listener import listen
+from core.transcriber import transcribe
 
-async def test_drive():
+async def main():
     print("🚀 Iniciando teste do Jarvis...")
-    # O comando precisa ser específico para testar o entendimento de contexto
-    comando = "Jarvis, verifique as mudanças no projeto jarvis e faça um commit seguindo o padrão conventional commits, depois envie para o GitHub."
-
-    resposta = agent(comando)
-
-    print(f"\n✅ Jarvis Finalizou!")
-    print(f"Mensagem: {resposta['message']}")
-
-    # Chama a sua função de voz
-    await speak(resposta["message"])
+    voice_command = listen()
+    print(voice_command)
+    command = transcribe(voice_command)
+    print(command)
+    agent_response = agent(command)
+    print(agent_response)
+    await speak(agent_response["message"])
 
 if __name__ == "__main__":
-    asyncio.run(test_drive())
+    while True:
+        asyncio.run(main())

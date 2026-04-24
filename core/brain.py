@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # cria a função agent que recebe o userMessage
 def agent(userMessage):
   load_dotenv() # carrega o .env
-  instructions = open("../Jarvis.md").read() #lê o Jarvis.md
+  instructions = open("./Jarvis.md").read() #lê o Jarvis.md
   client = Groq(api_key=os.environ.get("GROQ_API_KEY")) # inicia o Groq utilizando a API
   # cria um array messages que contém as mensagens que o Groq recebe, no caso instruções e user message
   messages = [
@@ -31,7 +31,6 @@ def agent(userMessage):
 
     # resposta crua do Groq sem tratamento
     raw_response = chat_completion.choices[0].message.content
-    print(f"\n--- PENSAMENTO DO JARVIS ---\n{raw_response}\n---------------------------")
     try:
       # pega a primeira chave e a ultima chave da resposta crua
       start = raw_response.find('{')
@@ -51,7 +50,6 @@ def agent(userMessage):
 
       # executa ação e salva o resultado
       if response.get("action"):
-        print(f"Executando: {response["action"]}")
         result = execute_action(response["action"])
         messages.append({ "role": "user", "content": result})
 
