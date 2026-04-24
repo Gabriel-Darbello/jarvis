@@ -161,8 +161,8 @@ Exemplo de estrutura:
 
 ### V1 — MVP (escopo atual)
 - [x] Arquitetura definida
-- [ ] Wake word com OpenWakeWord
-- [ ] Gravação e detecção de silêncio
+- [x] Wake word com OpenWakeWord
+- [x] Gravação e detecção de silêncio
 - [x] Transcrição via Groq Whisper
 - [x] Loop agêntico com Groq LLaMA
 - [x] Execução de comandos via subprocess
