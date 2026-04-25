@@ -28,6 +28,24 @@ async def main():
                 while True:
                     # executa ação e salva o resultado
                     if agent_response.get("action"):
+                        if agent_response["action"].get("destructive"):
+
+                            await speak(agent_response["message"] or "Atenção, comando perigoso detectado. Devo prosseguir?")
+                            voice_confirm, _ = record_command()
+                            confirm_text = transcribe(voice_confirm)
+                            print(confirm_text)
+                            confirm_words = ["sim", "pode", "prossiga", "confirmado", "deve"]
+
+                            if any(word in confirm_text.lower() for word in confirm_words):
+                                result = execute_action(agent_response["action"])
+                                messages.append({ "role": "user", "content": f"resultado da ação {result}"})
+                                agent_response = agent(None, messages)
+                                continue
+                            else:
+                                await speak("Comando cancelado")
+                                messages[:] = [messages[0]]
+                                break
+
                         result = execute_action(agent_response["action"])
                         messages.append({ "role": "user", "content": f"resultado da ação {result}"})
                         agent_response = agent(None, messages)
