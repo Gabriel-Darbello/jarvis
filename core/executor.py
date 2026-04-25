@@ -4,12 +4,6 @@ import subprocess
 # Função para executar uma ação recebida em dicionario python
 def execute_action(action):
   try:
-    # Verifica se a ação é destrutiva e solicita confirmação do usuário
-    if action["destructive"]:
-      confirm = input("A ação é destrutiva. Tem certeza que deseja continuar? (S/n): ")
-      if confirm.lower() != 's':
-        return "Execução cancelada."
-
     # Executa o comando especificado no JSON usando subprocess.run
     result = subprocess.run(
       action["command"],
