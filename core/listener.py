@@ -20,93 +20,77 @@ def callback(indata, frames, time, status):
     # Coloca o audio em uma fila
     audio_queue.put(byte_frame)
 
-def listen():
-    # Abre o microfone definindo configurações basicas sendo elas:
-    # samplerate(16kHz), blocksize, canais (mono), callback e tipo(float32)
-    global model # cria a variavel global "model"
-    with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32',
-                    blocksize=frame_size, callback=callback):
+def await_wake_word(model):
+    print("Esperando wake word...")
+    ignore_frames = 40
 
-        print("Esperando wake word...")
-        state = "ESPERANDO" # define o estado como esperando
-        frames_command = [] # cria uma lista vazia
-        silence = 0 # tempo em silencio
-        ignore_frames = 40 # frames a ser ignorados
+    # Limpa a fila antes de começar
+    while not audio_queue.empty():
+        audio_queue.get()
 
-        # faz um loop que limpa a lista de audio
-        while not audio_queue.empty(): audio_queue.get()
+    while True:
+        byte_frame = audio_queue.get()
 
-        # inicia o loop principal
-        while True:
-            # pega um byte frame da lista
-            byte_frame = audio_queue.get()
+        if ignore_frames > 0:
+            ignore_frames -= 1
+            if ignore_frames == 0:
+                # Limpa novamente após estabilizar o mic
+                while not audio_queue.empty():
+                    audio_queue.get()
+                model = Model() # Garante que o modelo está limpo após o ruído inicial
+            continue # Pula o processamento enquanto ignore_frames > 0
 
-            # se o estado for "ESPERANDO"
-            if state == "ESPERANDO":
-                # ignora os primeiros 40 frames da lista
-                if ignore_frames > 0:
-                    ignore_frames -= 1
+        # Converte de float32 para int16 (utilizado pelo OpenWakeWord)
+        frame_np = np.frombuffer(byte_frame, dtype=np.int16)
+        # Faz a previsão com o modelo
+        prediction = model.predict(frame_np)
+        # recebe o score do hey jarvis
+        score = prediction.get("hey_jarvis", 0)
+        # se o score for maior que 0.5 retorna retorna o model
+        if score > 0.5:
+            print("Jarvis ativado")
+            return Model()
 
-                    # quando ignora todos limpa a lista novamente e inicia o modelo
-                    if ignore_frames == 0:
-                        while not audio_queue.empty():
-                            audio_queue.get()
-                        model = Model()
-                    continue
 
-                # converte de float32 para int16 (formato utilizado pelo OpenWakeWord)
-                frame_np = np.frombuffer(byte_frame, dtype=np.int16)
-                # faz com que o modelo verifique o audio e retorna um score de previsões
-                prediction = model.predict(frame_np)
-                # pega o score da frase "Hey jarvis"
-                score = prediction.get("hey_jarvis", 0)
-                # se o score for acima de 0.5 em uma escala de 0 a 1
-                if score > 0.5:
-                    # reseta o frames command
-                    frames_command = []
-                    print("WAKE WORD DETECTADA!")
-                    # limpa a lista novamente
-                    while not audio_queue.empty():
-                        audio_queue.get()
-                    # reinicia o modelo
-                    model = Model()
-                    # altera o estado par gravando
-                    state = "GRAVANDO"
-                    # reseta o tempo de silencio
-                    silence = 0
+def record_command():
+    frames_command = []
+    silence = 0
+    while not audio_queue.empty():
+        audio_queue.get()
 
-            # se o estado for "GRAVANDO"
-            elif state == "GRAVANDO":
-                # adiciona um byte frame na lista
-                frames_command.append(byte_frame)
-                # verifica se está gravando audio
-                is_speech = vad.is_speech(byte_frame, sample_rate)
+    while True:
+        byte_frame = audio_queue.get()
+        # adiciona um byte frame na lista
+        frames_command.append(byte_frame)
 
-                # se não estiver falando adiciona 1 a lista
-                if not is_speech:
-                    silence += 1
-                    # imprime de 10 em 10 o tempo em silencio
-                    if silence % 10 == 0: print(f"Silêncio: {silence}")
-                    # se o contador de silencio for igual a 50
-                    if silence >= 50:
-                        # reseta os frames para serem ignorados
-                        ignore_frames = 40
-                        # reseta o silencio
-                        silence = 0
-                        #defino o estado para "ESPERANDO"
-                        state = "ESPERANDO"
-                        # limpa a lista
-                        while not audio_queue.empty():
-                            audio_queue.get()
-                        # reseta o modelo
-                        model = Model()
-                        # reseta as previsões do modelo
-                        prediction = {}
-                        # abre e fecha automaticamente a criação de um arquivo wav com o apelido wf
-                        # ele inicia o objeto que vai ser criado com caminho e modo de abertura
-                        with wave.open("temp/command.wav", "wb") as wf:
-                            wf.setnchannels(1) # define no wf quantos canais no caso mono
-                            wf.setsampwidth(2) # define no wf a largura da amostra em bytes em 2 bytes que equivale a 16bits
-                            wf.setframerate(sample_rate) # define no wf a taxa de amostragem no caso 16kHz
-                            wf.writeframes(b"".join(frames_command)) # define no wf conteudo do audio pegando os frames
-                        return "temp/command.wav"
+        # verifica se está gravando audio
+        is_speech = vad.is_speech(byte_frame, sample_rate)
+
+        # se não estiver falando adiciona 1 a lista
+        if not is_speech:
+            silence += 1
+
+            # imprime de 10 em 10 o tempo em silencio
+            if silence % 10 == 0:
+                print(f"Silêncio: {silence}")
+
+            # se o contador de silencio for igual a 50
+            if silence >= 50:
+                # reseta o silencio
+                silence = 0
+
+                # limpa a lista
+                while not audio_queue.empty():
+                    audio_queue.get()
+
+                # abre e fecha automaticamente a criação de um arquivo wav com o apelido wf
+                # ele inicia o objeto que vai ser criado com caminho e modo de abertura
+                with wave.open("temp/command.wav", "wb") as wf:
+                    wf.setnchannels(1)  # define no wf quantos canais no caso mono
+                    wf.setsampwidth(2)  # define no wf a largura da amostra em bytes em 2 bytes que equivale a 16bits
+                    wf.setframerate(sample_rate)  # define no wf a taxa de amostragem no caso 16kHz
+                    wf.writeframes(b"".join(frames_command))  # define no wf conteudo do audio pegando os frames
+
+                return "temp/command.wav", Model()
+        else:
+            silence = 0
