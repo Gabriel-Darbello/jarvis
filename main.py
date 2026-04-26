@@ -21,6 +21,7 @@ async def main():
         while True:
             try:
                 model_v1 = await_wake_word(model_v1)
+                await speak("Olá como posso ajudar?")
                 voice_command, model_v1 = record_command()
                 command = transcribe(voice_command)
                 print(command)
@@ -49,20 +50,23 @@ async def main():
                         result = execute_action(agent_response["action"])
                         messages.append({ "role": "user", "content": f"resultado da ação {result}"})
                         agent_response = agent(None, messages)
-                        continue
-
-                    # se não houver ação ele fala
-                    speak_message = agent_response.get("message")
-                    if speak_message:
-                        await speak(agent_response["message"])
 
                     # reseta a lista de mensagens para o estado anterior para reduzir consumo de tokens
                     if agent_response.get("finished") and messages:
+                        speak_message = agent_response.get("message")
+                        if speak_message:
+                            await speak(agent_response["message"])
                         messages[:] = [messages[0]]
                         break
 
+                    if not agent_response.get("action") and not agent_response.get("finished"):
+                        print("Erro de estado: IA não definiu próximo passo. Encerrando ciclo.")
+                        break                                # se houver terminado ele fala
+
             except Exception as error:
-                print(error)
+                print(f"Erro crítico no loop do Jarvis: {type(error).__name__} - {error}")
+                await speak("Ocorreu um erro interno no meu sistema, senhor. Reiniciando módulos.")
+                messages = []
 
 if __name__ == "__main__":
    asyncio.run(main())
