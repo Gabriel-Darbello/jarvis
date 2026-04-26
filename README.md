@@ -170,13 +170,13 @@ Exemplo de estrutura:
 - [x] Resposta em voz com edge-tts
 - [x] Jarvis.md como contexto persistente
 
- ### V2 — Controle e leitura de interfaces gráficas
+ ### V2 — Melhorias para o agente
 
-- [ ] Sistema de skills modulares
-- [ ] Modo offline com modelo local (fallback)
-- [ ] Controle de janelas avançado (wmctrl / xdotool)
-- [ ] Controle de mouse utilizando automações como pyautogui ou outras coisas
-- [ ] Leitura da tela do computador para ler erros, entender imagens e etc
+- [ ] Conversa dinâmica sem a necessidade de chamada o tempo todo
+- [ ] Modelo basico e pro, sendo o básico para tarefes simples e pro para tarefas complexas
+- [ ] Sistema de skills
+- [ ] Memoria de curto ou longo prazo
+- [ ] Pegar contexto da janela aberta se necessário
 
 ---
 
