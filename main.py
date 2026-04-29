@@ -61,7 +61,7 @@ async def main():
 
                     if not agent_response.get("action") and not agent_response.get("finished"):
                         print("Erro de estado: IA não definiu próximo passo. Encerrando ciclo.")
-                        break                                # se houver terminado ele fala
+                        break  # se houver terminado ele fala
 
             except Exception as error:
                 print(f"Erro crítico no loop do Jarvis: {type(error).__name__} - {error}")

@@ -175,7 +175,7 @@ Exemplo de estrutura:
 - [ ] Conversa dinâmica sem a necessidade de chamada o tempo todo
 - [ ] Modelo basico e pro, sendo o básico para tarefes simples e pro para tarefas complexas
 - [ ] Sistema de skills
-- [ ] Memoria de curto ou longo prazo
+- [ ] Memoria de curto e longo prazo
 - [ ] Pegar contexto da janela aberta se necessário
 
 ---
