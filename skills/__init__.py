@@ -1,0 +1,1 @@
+avaible_skills = {}
