@@ -1,6 +1,6 @@
 import os
 
-class SystemCommandSkill:
+class BaseSkill:
     def __init__(self):
         self.whitelist = ['ls', 'git', 'cat', 'echo', 'mkdir', 'touch', 'cp', 'rm']
         self.allowed_zones = [
