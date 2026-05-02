@@ -1,11 +1,13 @@
-from base import BaseSkill
+from skills.base import BaseSkill
 import os
 
 class FileReadSkill(BaseSkill):
     def __init__(self):
         super().__init__()
 
-    def execute(self, path):
+    def execute(self, params):
+        path = params.get("file_path")
+
         if not self._is_safe_path(path):
             return "Erro: Acesso a este diretório não é permitido por segurança."
         try:

@@ -1,11 +1,13 @@
-from base import BaseSkill
+from skills.base import BaseSkill
 import psutil
 
 class CloseAppSkill(BaseSkill):
     def __init__(self):
         super().__init__()
 
-    def execute(self, apps = []):
+    def execute(self, params):
+        apps = params.get("app_name")
+
         if isinstance(apps, str):
             apps = [apps]
 

@@ -1,13 +1,17 @@
-from base import BaseSkill
+from skills.base import BaseSkill
 import os, subprocess
 
 class OpenAppSkill(BaseSkill):
     def __init__(self):
         super().__init__()
 
-    def execute(self, apps = []):
-        if isinstance(apps, str):
-            apps = [apps]
+    def execute(self, params):
+        app_to_open = params.get("app_name")
+
+        if not app_to_open:
+            return "Erro: Parâmetro app_name não encontrado."
+
+        apps = [app_to_open] if isinstance(app_to_open, str) else app_to_open
 
         app_folder = [
             "/usr/share/applications",

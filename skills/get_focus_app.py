@@ -1,4 +1,4 @@
-from base import BaseSkill
+from skills.base import BaseSkill
 import subprocess
 import psutil
 
