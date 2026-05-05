@@ -1,8 +1,6 @@
 import asyncio
-import threading
 import sounddevice as sd
 import warnings
-from core.start_model import start_model
 from core.listener import *
 from core.brain import JarvisBrain
 from core.speaker import speak
@@ -11,8 +9,7 @@ from core.voice_confirm import voice_confirm
 
 async def main():
     warnings.filterwarnings("ignore", category=UserWarning)
-    threading.Thread(target=start_model, daemon=True).start()
-    agent = JarvisBrain("qwen2.5:3b")
+    agent = JarvisBrain("llama3.2:3b-instruct-q4_0")
     model_v1 = Model()
 
     with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32',
@@ -28,6 +25,7 @@ async def main():
 
                 agent_response = await agent.process_logic(command, voice_confirm)
 
+                print(agent_response)
                 await speak(agent_response)
 
             except Exception as error:

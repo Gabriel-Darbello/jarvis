@@ -1,157 +1,94 @@
 # Jarvis 🤖
 
-Assistente pessoal ativado por voz para Linux, controlado por comandos em linguagem natural. Jarvis executa ações no sistema operacional, gerencia projetos, roda comandos Git, controla janelas e muito mais — tudo por voz.
+Assistente pessoal ativado por voz para Linux, controlado por comandos em linguagem natural. O Jarvis evoluiu para um agente autônomo modular que utiliza **Programação Orientada a Objetos (POO)** para garantir que cada ação no sistema seja segura, previsível e eficiente.
 
-> Projeto de portfólio — desenvolvido para demonstrar integração de STT, LLM agêntico e automação de sistema no Linux.
+> Projeto de portfólio — foco em integração de LLMs agênticos, automação de sistemas Linux e processamento local.
+
+---
+
+## 🚀 O que há de novo na V2?
+
+Diferente da primeira versão, o Jarvis agora não apenas executa comandos, mas entende o ambiente:
+
+*   **Sistema de Skills (POO):** As ações (abrir apps, criar arquivos, controlar Git) são classes modulares. Isso impede que a IA "alucine" comandos perigosos e garante que os parâmetros sejam validados antes da execução.
+*   **Memória de Curto e Longo Prazo:** O Jarvis mantém o contexto da conversa atual e consegue consultar informações importantes de interações passadas.
+*   **Contexto de Janela Ativa:** O assistente sabe qual programa você está usando no momento (ex: VS Code ou Navegador), permitindo comandos como "Jarvis, o que tem de errado nesse código?" com base no contexto real.
 
 ---
 
 ## Demonstração do fluxo
-
 ```
-"Hey Jarvis" → grava áudio → transcreve → LLM raciocina → executa → responde por voz
+"Hey Jarvis" → Warm-up (esquenta o motor) → Transcreve (Groq) → Raciocínio (Brain) → Skills (POO) → Resposta (TTS)
 ```
-
-Exemplo de comando:
-
-> *"Jarvis, envia as mudanças do Projeto pro GitHub"*
-
-O que acontece por baixo:
-1. Detecta a janela ativa → identifica o projeto
-2. Roda `git status` e `git diff` → lê as mudanças
-3. Monta a mensagem de commit seguindo Conventional Commits (definido no `Jarvis.md`)
-4. Executa `git add . && git commit -m "..." && git push`
-5. Fala: *"Mudanças enviadas com sucesso!"*
 
 ---
 
-## Arquitetura
+## Arquitetura Atual
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        JARVIS V1                            │
+│                        JARVIS V2                            │
 │                                                             │
-│  [Microfone] ──► OpenWakeWord ──► sounddevice grava         │
-│                                         │                   │
-│                                    webrtcvad                │
-│                                 (detecta silêncio)          │
-│                                         │                   │
-│                                  Groq Whisper               │
-│                               (áudio → texto)               │
-│                                         │                   │
-│                    Jarvis.md ──► Groq LLaMA  ◄──────────┐   │
-│                                         │               │   │
-│                                   JSON response         │   │
-│                              { finished, action,        │   │
-│                                message }                │   │
-│                                         │               │   │
-│                               finished? ─── false ──────┘   │
-│                                  │ true                     │
-│                         Python executa action               │
-│                       subprocess.run(command)               │
-│                                         │                   │
-│                                    edge-tts                 │
-│                               (texto → voz)                 │
+│  [Entrada] ──► Wake Word ──► Groq Whisper (STT)             │
+│                                     │                       │
+│  [Cérebro] ──► Brain Loop (Qwen 2.5 3B / Llama 3)           │
+│                (Raciocínio lógico e decisão de ação)        │
+│                                     │                       │
+│  [Contexto] ──► Memória + Janela Ativa (xdotool/psutil)     │
+│                                     │                       │
+│  [Ação]    ──► Executor de Skills (Modulares em POO)        │
+│                (FileSkill, GitSkill, SystemSkill)           │
+│                                     │                       │
+│  [Saída]   ──► Edge-TTS ──► Resposta em voz                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Loop agêntico
-
-O Jarvis não executa apenas um comando por vez. Quando necessário, ele opera em loop:
-
-1. Groq retorna `finished: false` com uma `action` para buscar informação
-2. Python executa e devolve o output para o Groq
-3. Groq analisa o resultado e decide o próximo passo
-4. Repete até `finished: true`
-
-Isso permite tarefas como: *"commita o projeto"* — onde ele precisa primeiro identificar o projeto, ler as mudanças, montar a mensagem e só então executar o commit.
-
-### Segurança
-
-Comandos destrutivos (`rm`, `sudo`, `mkfs`, `dd`, `chmod`) exigem confirmação por voz antes de serem executados. Isso evita que alucinações do modelo causem danos ao sistema.
-
 ---
 
-## Stack
+## Stack Técnica
 
-| Componente | Biblioteca | Função |
+| Componente | Tecnologia | Função |
 |---|---|---|
-| Wake word | `openwakeword` | Detecta "Hey Jarvis" |
-| Captura de áudio | `sounddevice` | Grava do microfone |
-| Detecção de silêncio | `webrtcvad` | Para a gravação automaticamente |
-| STT | Groq Whisper API | Transcreve áudio para texto |
-| LLM | Groq LLaMA 3.3 70B | Interpreta e raciocina |
-| Contexto | `Jarvis.md` | Configuração, projetos, convenções |
-| Execução | `subprocess` (Python) | Roda comandos no sistema |
-| TTS | `edge-tts` | Resposta em voz natural |
+| **Wake Word** | `openwakeword` | Detecção do gatilho "Hey Jarvis" |
+| **STT** | Groq Whisper API | Transcrição de áudio em tempo real |
+| **LLM Principal** | Qwen 2.5 3B / Llama 3 | Motor de raciocínio e decisão |
+| **Lógica de Ação** | Python (POO) | Skills modulares e seguras |
+| **Contexto** | `psutil` / `xdotool` | Monitoramento de janelas e hardware |
+| **TTS** | `edge-tts` | Síntese de voz natural |
 
 ---
 
-## Estrutura do projeto
-
-```
+## Estrutura do Projeto
+```text
 jarvis/
-├── main.py               # Loop principal: wake word → STT → LLM → ação → TTS
-├── Jarvis.md             # Contexto pessoal, projetos e instruções do assistente
+├── main.py               # Loop principal e aquecimento do modelo
+├── Jarvis.md             # Instruções de sistema e contexto pessoal
 ├── core/
-│   ├── listener.py       # OpenWakeWord + sounddevice + webrtcvad
-│   ├── transcriber.py    # Integração com Groq Whisper
-│   ├── brain.py          # Loop agêntico com Groq LLaMA
-│   ├── executor.py       # subprocess + validação de comandos destrutivos
-│   └── speaker.py        # edge-tts
+│   ├── brain.py          # Lógica do agente e gerenciamento de contexto
+│   ├── executor.py       # Orquestrador que aciona as skills via JSON
+│   └── ...               # Listener, Transcriber e Speaker
+├── skills/
+│   ├── base.py           # Classe abstrata (Contrato das Skills)
+│   ├── system.py         # Controle de aplicações e hardware
+│   └── files.py          # Manipulação de arquivos e diretórios
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Jarvis.md
+## Exemplo de Comunicação (JSON)
 
-O arquivo `Jarvis.md` é o coração da configuração do Jarvis. Ele é injetado no system prompt a cada requisição, dando ao modelo contexto sobre quem você é, seus projetos e suas regras.
-
-Exemplo de estrutura:
-
-```markdown
-# Jarvis — Contexto Pessoal
-
-## Sobre mim
-- Nome: Gabriel
-- Sistema: Linux Mint
-- Shell: bash
-
-## Convenções
-### Git — Conventional Commits
-- Formato: tipo(escopo): descrição
-- Tipos: feat, fix, docs, chore, refactor, test
-- Sempre em inglês, imperativo
-
-## Comportamento esperado
-- Respostas diretas e técnicas
-- Sempre verificar o projeto ativo antes de rodar git
-- Pedir confirmação antes de comandos destrutivos
-```
-
----
-
-## Formato JSON esperado do LLM
-
+Para garantir a integridade, o Jarvis se comunica com o sistema através de um formato estruturado:
 ```json
 {
   "finished": false,
-  "action": {
-    "type": "shell",
-    "command": "git -C ~/projetos/roadup status",
-    "destructive": false
+  "skill": "SystemSkill",
+  "params": {
+    "action": "close",
+    "app_name": "vscode"
   },
-  "message": null
-}
-```
-
-```json
-{
-  "finished": true,
-  "action": null,
-  "message": "Commit enviado com sucesso!"
+  "message": "Entendido, fechando o VS Code agora."
 }
 ```
 
@@ -159,59 +96,30 @@ Exemplo de estrutura:
 
 ## Roadmap
 
-### V1 — MVP (escopo atual)
-- [x] Arquitetura definida
-- [x] Wake word com OpenWakeWord
-- [x] Gravação e detecção de silêncio
-- [x] Transcrição via Groq Whisper
-- [x] Loop agêntico com Groq LLaMA
-- [x] Execução de comandos via subprocess
-- [x] Confirmação de comandos destrutivos por voz
-- [x] Resposta em voz com edge-tts
-- [x] Jarvis.md como contexto persistente
+### V1 — MVP (Concluído)
+- [x] Interface de voz básica e execução de shell simples.
 
- ### V2 — Melhorias para o agente
-
-- [ ] Conversa dinâmica sem a necessidade de chamada o tempo todo
-- [ ] Modelo basico e pro, sendo o básico para tarefes simples e pro para tarefas complexas
-- [x] Sistema de skills
-- [x] Memoria de curto e longo prazo
-- [x] Pegar contexto da janela aberta se necessário
+### V2 — Agente Inteligente (Fase Atual)
+- [x] **Skills Modulares (POO):** Maior segurança e facilidade de expansão.
+- [x] **Memória Persistente:** Curto e longo prazo.
+- [x] **Leitura de Contexto:** Identificação de janela ativa.
+- [ ] **Roteamento de Modelos:** Divisão entre Basic (Local) e Pro (Cloud).
+- [ ] **Conversa Dinâmica:** Modo de escuta contínua (VAD).
 
 ---
 
-## Pré-requisitos
-
-- Linux (testado no Linux Mint)
-- Python 3.10+
-- Conta gratuita na [Groq](https://console.groq.com)
-- Microfone
-
----
-
-## Instalação
-
-```bash
-git clone https://github.com/seu-usuario/jarvis
-cd jarvis
-pip install -r requirements.txt
-cp Jarvis.md.example Jarvis.md  # edite com seus dados
-```
-
-Configure a variável de ambiente:
-
-```bash
-export GROQ_API_KEY="sua_chave_aqui"
-```
-
-Execute:
-
-```bash
-python main.py
-```
+## Instalação e Uso
+1. Certifique-se de ter o **Ollama** rodando localmente com o modelo `qwen2.5:3b`.
+2. Clone o repositório e instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Inicie o assistente:
+   ```bash
+   python main.py
+   ```
 
 ---
 
 ## Licença
-
 MIT

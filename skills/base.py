@@ -12,7 +12,6 @@ class BaseSkill:
     def _is_safe_path(self, path):
         if not path:
             return False
-
         target_path = Path(os.path.abspath(os.path.expanduser(path))).resolve()
         for zone in self.allowed_zones:
             if target_path.is_relative_to(zone):
