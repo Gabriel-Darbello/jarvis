@@ -62,6 +62,13 @@ class JarvisBrain:
         with open(f"./Jarvis_brain/03_memory/{previous_context}.md", 'a', encoding='utf-8') as file:
             file.write('\n' + resume)
 
+    def _load_context(self):
+        with open("./Jarvis.md", "r", encoding="utf-8") as system:
+            system_prompt = system.read()
+        with open(f"./Jarvis_brain/03_memory/{self.context}.md", "r", encoding="utf-8") as context:
+            context_prompt = context.read()
+
+        self.memory[0]["content"] = f"{system_prompt} \n {context_prompt}"
 
     def _get_llm_decision(self):
         format_schema = {
@@ -177,9 +184,10 @@ class JarvisBrain:
 
         previous_context = self.context
         self._detect_context(user_input)
-        if previous_context != self.context and previous_context != None:
+        if previous_context != self.context and previous_context is not None:
             context_resume = self._resume_context()
             self._save_resume(context_resume, previous_context)
+            self._load_context()
 
         for _ in range(5):
             llm_response = self._get_llm_decision()
