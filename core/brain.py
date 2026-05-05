@@ -1,5 +1,5 @@
 from skills.__init__ import avaible_skills
-import ollama, json, re
+import ollama, json, re, threading, time
 
 class JarvisBrain:
     def __init__(self, model_name, max_memory = 10):
@@ -10,38 +10,69 @@ class JarvisBrain:
         self.model = model_name
         self.avaible_skills = avaible_skills
         self.max_memory = max_memory
+        threading.Thread(target=self._preload_model, daemon=True).start()
+
+    def _preload_model(self):
+        try:
+            ollama.chat(
+                model=self.model,
+                messages= self.memory,
+                stream=True,
+                options={
+                    "keep_alive": -1,
+                    "temperature": 0.1,
+                    "num_thread": 6
+                }
+            )
+
+            print(f"\n[SISTEMA] {self.model} carregado e pronto!")
+        except Exception as e:
+            print(f"Erro no warmup: {e}")
 
     def _get_llm_decision(self):
         format_schema = {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "anyOf": [
-                            {
-                                "type": "object",
-                                "properties": {
-                                    "skill_name": {"type": "string"},
-                                    "params": {"type": "object"},
-                                    "destructive": {"type": "boolean"}
-                                },
-                                "required": ["skill_name", "params", "destructive"]
-                            },
-                            {"type": "null"}
-                        ]
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": ["object", "null"],
+                        "properties": {
+                            "skill_name": {"type": "string"},
+                            "params": {"type": "object"},
+                            "destructive": {"type": "boolean"}
+                        }
+                    },
+                    "finished": {"type": "boolean"},
+                    "message": {"type": "string"}
                 },
-                "finished": {"type": "boolean"},
-                "message": {"type": "string"}
-            },
-            "required": ["action", "finished", "message"]
-        }
+                "required": ["action", "finished", "message"]
+            }
 
         try:
+            start_time = time.time()
             response = ollama.chat(
                 model=self.model,
                 messages= self.memory,
-                format=format_schema
+                format=format_schema,
+                stream=True,
+                options={
+                    "keep_alive": -1,
+                    "temperature": 0.1,
+                    "num_thread": 6
+                }
             )
-            return response['message']['content']
+
+            first_token_time = None
+            full_response = ""
+            for chunk in response:
+                if first_token_time is None:
+                    first_token_time = time.time() - start_time
+                    print(f"--- Tempo até a primeira letra: {first_token_time:.2f}s ---")
+
+                full_response += chunk['message']['content']
+
+            total_time = time.time() - start_time
+            print(f"--- Tempo total de geração: {total_time:.2f}s ---")
+            return full_response
         except Exception as e:
             return f"Erro ao se comunicar com o modelo: {e}"
 
@@ -82,27 +113,37 @@ class JarvisBrain:
 
     def _execute_skill(self, skill_name, params):
         skill_class = next((s for s in self.avaible_skills if s.__name__ == skill_name), None)
-
         if skill_class:
+            skill_instruction = ""
+            try:
+                with open(f"./Jarvis_brain/01_skills/{skill_name}.md", "r", encoding="utf-8") as skill_md:
+                    skill_instruction = skill_md.read()
+            except FileNotFoundError:
+                print(f"[AVISO] Arquivo {skill_name}.md não encontrado. Usando skill sem instrução extra.")
+
             try:
                 skill_instance = skill_class()
                 result = skill_instance.execute(params)
-                return result
+                return result, skill_instruction
             except Exception as e:
-                return f"Erro ao executar a skill {skill_name}: {e}"
+                return f"Erro ao executar a skill {skill_name}: {e}", ''
 
-        return "Skill não encontrada no sistema de execução."
+        return "Skill não encontrada no sistema de execução.", ''
 
     def _trim_memory(self):
+        self.memory = [memory for memory in self.memory if not "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" in memory.get("content")]
         if len(self.memory) > self.max_memory + 1:
             self.memory = self.memory[0:1] + self.memory[-self.max_memory:]
 
 
+
     async def process_logic(self, user_input, callback_voice_confirm):
         self.memory.append({"role": "user", "content":user_input})
+        self._trim_memory()
 
-        while True:
+        for _ in range(5):
             llm_response = self._get_llm_decision()
+            print(f"\n[DEBUG LLM]: {llm_response}")
             self.memory.append({"role": "assistant", "content": llm_response})
             clean_llm_response = self._clear_response(llm_response)
 
@@ -114,9 +155,16 @@ class JarvisBrain:
                     confirm = await callback_voice_confirm(clean_llm_response.get("message"))
                     if not confirm:
                         self.memory.append({"role": "user", "content": "Ação cancelada pelo usuário."})
+                        self._trim_memory()
                         continue
-                llm_result = self._execute_skill(skill_name, params)
-                self.memory.append({"role": "user", "content": f"Resultado da ação: {llm_result}"})
+
+                llm_result, skill_instruction = self._execute_skill(skill_name, params)
+                llm_feedback = f"Resultado da ação: {llm_result}"
+                if skill_instruction:
+                    self.memory.append({"role": "user", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
+                self.memory.append({"role": "user", "content": llm_feedback})
+                self._trim_memory()
+
                 continue
 
             if clean_llm_response.get("finished"):
