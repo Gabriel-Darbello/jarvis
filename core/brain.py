@@ -1,11 +1,11 @@
 from skills.__init__ import avaible_skills
-import ollama, json, re, threading, time
+import ollama, json, re, threading, time, os
 
 class JarvisBrain:
     def __init__(self, model_name, max_memory = 10):
         with open("./Jarvis.md", "r", encoding="utf-8") as system_prompt:
             content = system_prompt.read()
-
+        self.context = None
         self.memory = [{"role": "system", "content": content}]
         self.model = model_name
         self.avaible_skills = avaible_skills
@@ -28,6 +28,40 @@ class JarvisBrain:
             print(f"\n[SISTEMA] {self.model} carregado e pronto!")
         except Exception as e:
             print(f"Erro no warmup: {e}")
+
+    def _detect_context(self, user_input):
+        projects = os.listdir("./Jarvis_brain/02_projects")
+
+        for project_md in projects:
+            project = project_md.replace(".md", "")
+
+            if project in user_input.lower():
+                self.context = project
+                return project
+
+        return None
+
+    def _resume_context(self):
+        with open("./Jarvis_brain/03_memory/memory_instruction.md", "r", encoding="utf-8") as f:
+            memory_instruction = f.read()
+        self.memory.append({"role":"tool", "content":f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Resuma essa conversa seguindo: {memory_instruction}"})
+        response = ollama.chat(
+            model=self.model,
+            messages= self.memory,
+            stream=False,
+            options={
+                "keep_alive": -1,
+                "temperature": 0.1,
+                "num_thread": 6
+            }
+        )
+
+        return response['message']['content']
+
+    def _save_resume(self, resume, previous_context):
+        with open(f"./Jarvis_brain/03_memory/{previous_context}.md", 'a', encoding='utf-8') as file:
+            file.write('\n' + resume)
+
 
     def _get_llm_decision(self):
         format_schema = {
@@ -141,11 +175,18 @@ class JarvisBrain:
         self.memory.append({"role": "user", "content":user_input})
         self._trim_memory()
 
+        previous_context = self.context
+        self._detect_context(user_input)
+        if previous_context != self.context and previous_context != None:
+            context_resume = self._resume_context()
+            self._save_resume(context_resume, previous_context)
+
         for _ in range(5):
             llm_response = self._get_llm_decision()
             print(f"\n[DEBUG LLM]: {llm_response}")
             self.memory.append({"role": "assistant", "content": llm_response})
             clean_llm_response = self._clear_response(llm_response)
+
 
             action = clean_llm_response.get("action") or {}
             skill_name = action.get("skill_name")
@@ -154,18 +195,15 @@ class JarvisBrain:
                 if action.get("destructive"):
                     confirm = await callback_voice_confirm(clean_llm_response.get("message"))
                     if not confirm:
-                        self.memory.append({"role": "user", "content": "Ação cancelada pelo usuário."})
+                        self.memory.append({"role": "tool", "content": "Ação cancelada pelo usuário."})
                         self._trim_memory()
-                        continue
 
                 llm_result, skill_instruction = self._execute_skill(skill_name, params)
                 llm_feedback = f"Resultado da ação: {llm_result}"
                 if skill_instruction:
-                    self.memory.append({"role": "user", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
-                self.memory.append({"role": "user", "content": llm_feedback})
+                    self.memory.append({"role": "tool", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
+                self.memory.append({"role": "tool", "content": llm_feedback})
                 self._trim_memory()
-
-                continue
 
             if clean_llm_response.get("finished"):
                 return clean_llm_response.get("message", "Tarefa concluída.")
