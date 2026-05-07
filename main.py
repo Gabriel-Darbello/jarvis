@@ -9,7 +9,7 @@ from core.voice_confirm import voice_confirm
 
 async def main():
     warnings.filterwarnings("ignore", category=UserWarning)
-    agent = JarvisBrain("llama3.2:3b-instruct-q4_0")
+    agent = JarvisBrain(basic_model="llama3.2:3b-instruct-q4_0", pro_model="qwen2.5:3b")
     model_v1 = Model()
 
     with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32',

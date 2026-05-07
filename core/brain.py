@@ -2,13 +2,14 @@ from skills.__init__ import avaible_skills
 import ollama, json, re, threading, time, os
 
 class JarvisBrain:
-    def __init__(self, model_name, max_memory = 10):
+    def __init__(self, basic_model, pro_model, max_memory = 10):
         with open("./Jarvis.md", "r", encoding="utf-8") as system_prompt:
             content = system_prompt.read()
         self.context = None
         self.memory = [{"role": "system", "content": content}]
-        self.model = model_name
-        self.avaible_skills = avaible_skills
+        self.pro_model = pro_model
+        self.basic_model = basic_model
+        self.model = self.basic_model
         self.max_memory = max_memory
         threading.Thread(target=self._preload_model, daemon=True).start()
 
@@ -199,12 +200,20 @@ class JarvisBrain:
             action = clean_llm_response.get("action") or {}
             skill_name = action.get("skill_name")
             params = action.get("params")
+
+            pro_skills = ["FileAppendSkill",  "FileCreateSkill", "FileReadSkill"]
+            if  skill_name in pro_skills:
+                self.model = self.pro_model
+            else:
+                self.model = self.basic_model
+
             if skill_name:
                 if action.get("destructive"):
                     confirm = await callback_voice_confirm(clean_llm_response.get("message"))
                     if not confirm:
                         self.memory.append({"role": "tool", "content": "Ação cancelada pelo usuário."})
                         self._trim_memory()
+                        continue
 
                 llm_result, skill_instruction = self._execute_skill(skill_name, params)
                 llm_feedback = f"Resultado da ação: {llm_result}"

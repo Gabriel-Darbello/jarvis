@@ -103,7 +103,7 @@ Para garantir a integridade, o Jarvis se comunica com o sistema através de um f
 - [x] **Skills Modulares (POO):** Maior segurança e facilidade de expansão.
 - [x] **Memória Persistente:** Curto e longo prazo.
 - [x] **Leitura de Contexto:** Identificação de janela ativa.
-- [ ] **Roteamento de Modelos:** Divisão entre Basic (Local) e Pro (Cloud).
+- [x] **Roteamento de Modelos:** Divisão entre Basic (llama3.2) e Pro (Qwen2.5).
 - [ ] **Conversa Dinâmica:** Modo de escuta contínua (VAD).
 
 ---

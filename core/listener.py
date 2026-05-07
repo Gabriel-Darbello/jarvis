@@ -1,6 +1,5 @@
 import webrtcvad
 import queue
-import sounddevice as sd
 import numpy as np
 from openwakeword.model import Model
 import wave
