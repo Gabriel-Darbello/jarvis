@@ -15,7 +15,7 @@ class FileAppendSkill(BaseSkill):
         try:
             file_path = Path(os.path.expanduser(path))
 
-            if not file.exists():
+            if not file_path.exists():
                 return "Erro: arquivo não existe. Use a skill de criar antes"
 
             with open(file_path, 'a', encoding='utf-8') as file:
