@@ -104,7 +104,7 @@ Para garantir a integridade, o Jarvis se comunica com o sistema através de um f
 - [x] **Memória Persistente:** Curto e longo prazo.
 - [x] **Leitura de Contexto:** Identificação de janela ativa.
 - [x] **Roteamento de Modelos:** Divisão entre Basic (llama3.2) e Pro (Qwen2.5).
-- [ ] **Conversa Dinâmica:** Modo de escuta contínua (VAD).
+- [x] **Conversa Dinâmica:** Modo de escuta contínua (VAD).
 
 ---
 

@@ -3,7 +3,6 @@ from pathlib import Path
 
 class BaseSkill:
     def __init__(self):
-        self.whitelist = ['ls', 'git', 'cat', 'echo', 'mkdir', 'touch', 'cp', 'rm']
         self.allowed_zones = [
             Path(os.path.expanduser("~/Área de trabalho")).resolve(),
             Path(os.path.expanduser("~/programação/pessoal")).resolve(),

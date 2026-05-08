@@ -2,7 +2,7 @@ from skills.__init__ import avaible_skills
 import ollama, json, re, threading, time, os
 
 class JarvisBrain:
-    def __init__(self, basic_model, pro_model, max_memory = 10):
+    def __init__(self, basic_model, pro_model, max_memory = 5):
         with open("./Jarvis.md", "r", encoding="utf-8") as system_prompt:
             content = system_prompt.read()
         self.context = None
@@ -11,6 +11,7 @@ class JarvisBrain:
         self.basic_model = basic_model
         self.model = self.basic_model
         self.max_memory = max_memory
+        self.avaible_skills = avaible_skills
         threading.Thread(target=self._preload_model, daemon=True).start()
 
     def _preload_model(self):
