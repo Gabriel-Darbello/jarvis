@@ -17,3 +17,5 @@ avaible_skills = {
     GetFocusAppSkill,
     OpenAppSkill
 }
+
+list_dir = None

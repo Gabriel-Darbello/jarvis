@@ -1,4 +1,5 @@
 from skills.__init__ import avaible_skills
+from skills.get_focus_app import GetFocusAppSkill
 import ollama, json, re, threading, time, os
 
 class JarvisBrain:
@@ -12,6 +13,8 @@ class JarvisBrain:
         self.model = self.basic_model
         self.max_memory = max_memory
         self.avaible_skills = avaible_skills
+        self.projects = os.listdir("./Jarvis_brain/02_projects")
+
         threading.Thread(target=self._preload_model, daemon=True).start()
 
     def _preload_model(self):
@@ -31,13 +34,16 @@ class JarvisBrain:
         except Exception as e:
             print(f"Erro no warmup: {e}")
 
-    def _detect_context(self, user_input):
-        projects = os.listdir("./Jarvis_brain/02_projects")
+    def _detect_context(self, user_input, focus_app):
+        projects = self.projects
 
         for project_md in projects:
             project = project_md.replace(".md", "")
-
             if project in user_input.lower():
+                self.context = project
+                return project
+
+            if project in focus_app["titulo"].lower():
                 self.context = project
                 return project
 
@@ -181,14 +187,17 @@ class JarvisBrain:
 
 
     async def process_logic(self, user_input, callback_voice_confirm):
-        self.memory.append({"role": "user", "content":user_input})
         self._trim_memory()
+        focus_app = GetFocusAppSkill().execute()
+        self.memory.append({"role": "user", "content": user_input})
+        self.memory.append({"role": "tool", "content": f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Janela em foco: {focus_app['resumo']}"})
 
         previous_context = self.context
-        self._detect_context(user_input)
+        self._detect_context(user_input, focus_app)
         if previous_context != self.context and previous_context is not None:
             context_resume = self._resume_context()
             self._save_resume(context_resume, previous_context)
+            self._trim_memory()
             self._load_context()
 
         for _ in range(5):
