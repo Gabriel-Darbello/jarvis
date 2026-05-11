@@ -1,42 +1,23 @@
 from skills.__init__ import avaible_skills
+from groq import Groq
 from skills.get_focus_app import GetFocusAppSkill
-import ollama, json, re, threading, time, os
+import json, re, time, os, dotenv
 
 class JarvisBrain:
-    def __init__(self, basic_model, pro_model, max_memory = 5):
+    def __init__(self, max_memory = 5):
         with open("./Jarvis.md", "r", encoding="utf-8") as system_prompt:
             content = system_prompt.read()
         self.context = None
         self.memory = [{"role": "system", "content": content}]
-        self.pro_model = pro_model
-        self.basic_model = basic_model
-        self.model = self.basic_model
+        dotenv.load_dotenv()
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.model = "llama-3.3-70b-versatile"
         self.max_memory = max_memory
         self.avaible_skills = avaible_skills
         self.projects = os.listdir("./Jarvis_brain/02_projects")
 
-        threading.Thread(target=self._preload_model, daemon=True).start()
-
-    def _preload_model(self):
-        try:
-            ollama.chat(
-                model=self.model,
-                messages= self.memory,
-                stream=True,
-                options={
-                    "keep_alive": -1,
-                    "temperature": 0.1,
-                    "num_thread": 6
-                }
-            )
-
-            print(f"\n[SISTEMA] {self.model} carregado e pronto!")
-        except Exception as e:
-            print(f"Erro no warmup: {e}")
-
     def _detect_context(self, user_input, focus_app):
         projects = self.projects
-
         for project_md in projects:
             project = project_md.replace(".md", "")
             if project in user_input.lower():
@@ -52,19 +33,14 @@ class JarvisBrain:
     def _resume_context(self):
         with open("./Jarvis_brain/03_memory/memory_instruction.md", "r", encoding="utf-8") as f:
             memory_instruction = f.read()
-        self.memory.append({"role":"tool", "content":f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Resuma essa conversa seguindo: {memory_instruction}"})
-        response = ollama.chat(
+        self.memory.append({"role":"user", "content":f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Resuma essa conversa seguindo: {memory_instruction}"})
+        response = self.client.chat.completions.create(
             model=self.model,
             messages= self.memory,
-            stream=False,
-            options={
-                "keep_alive": -1,
-                "temperature": 0.1,
-                "num_thread": 6
-            }
+            temperature = 0.1,
         )
 
-        return response['message']['content']
+        return response.choices[0].message.content
 
     def _save_resume(self, resume, previous_context):
         with open(f"./Jarvis_brain/03_memory/{previous_context}.md", 'a', encoding='utf-8') as file:
@@ -79,49 +55,19 @@ class JarvisBrain:
         self.memory[0]["content"] = f"{system_prompt} \n {context_prompt}"
 
     def _get_llm_decision(self):
-        format_schema = {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": ["object", "null"],
-                        "properties": {
-                            "skill_name": {"type": "string"},
-                            "params": {"type": "object"},
-                            "destructive": {"type": "boolean"}
-                        }
-                    },
-                    "finished": {"type": "boolean"},
-                    "message": {"type": "string"}
-                },
-                "required": ["action", "finished", "message"]
-            }
-
         try:
             start_time = time.time()
-            response = ollama.chat(
+            response = self.client.chat.completions.create(
                 model=self.model,
-                messages= self.memory,
-                format=format_schema,
-                stream=True,
-                options={
-                    "keep_alive": -1,
-                    "temperature": 0.1,
-                    "num_thread": 6
-                }
+                messages=self.memory,
+                temperature=0.1,
+                response_format={"type": "json_object"}
             )
 
-            first_token_time = None
-            full_response = ""
-            for chunk in response:
-                if first_token_time is None:
-                    first_token_time = time.time() - start_time
-                    print(f"--- Tempo até a primeira letra: {first_token_time:.2f}s ---")
-
-                full_response += chunk['message']['content']
-
             total_time = time.time() - start_time
-            print(f"--- Tempo total de geração: {total_time:.2f}s ---")
-            return full_response
+            print(f"--- Tempo total: {total_time:.2f}s ---")
+            return response.choices[0].message.content
+
         except Exception as e:
             return f"Erro ao se comunicar com o modelo: {e}"
 
@@ -194,7 +140,7 @@ class JarvisBrain:
         self._trim_memory()
         focus_app = GetFocusAppSkill().execute()
         self.memory.append({"role": "user", "content": user_input})
-        self.memory.append({"role": "tool", "content": f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Janela em foco: {focus_app['resumo']}"})
+        self.memory.append({"role": "user", "content": f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Janela em foco: {focus_app['resumo']}"})
 
         previous_context = self.context
         self._detect_context(user_input, focus_app)
@@ -215,14 +161,11 @@ class JarvisBrain:
             skill_name = action.get("skill_name")
             params = action.get("params")
 
-            pro_skills = ["FileAppendSkill",  "FileCreateSkill", "FileReadSkill"]
-            self.model = self.pro_model if skill_name in pro_skills else self.basic_model
-
             if skill_name:
                 if action.get("destructive"):
                     confirm = await callback_voice_confirm(clean_llm_response.get("message"))
                     if not confirm:
-                        self.memory.append({"role": "tool", "content": "Ação cancelada pelo usuário."})
+                        self.memory.append({"role": "user", "content": "Ação cancelada pelo usuário."})
                         self._clear_temporary_instructions()
                         continue
 
@@ -230,9 +173,9 @@ class JarvisBrain:
                 llm_feedback = f"[RESULTADO DE {skill_name}] {llm_result}"
 
                 if skill_instruction:
-                    self.memory.append({"role": "tool", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
+                    self.memory.append({"role": "user", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
 
-                self.memory.append({"role": "tool", "content": llm_feedback})
+                self.memory.append({"role": "user", "content": llm_feedback})
                 self._clear_temporary_instructions()
 
             if clean_llm_response.get("finished"):
