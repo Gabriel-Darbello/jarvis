@@ -180,10 +180,14 @@ class JarvisBrain:
         return "Skill não encontrada no sistema de execução.", ''
 
     def _trim_memory(self):
-        self.memory = [memory for memory in self.memory if not "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" in memory.get("content")]
         if len(self.memory) > self.max_memory + 1:
             self.memory = self.memory[0:1] + self.memory[-self.max_memory:]
 
+    def _clear_temporary_instructions(self):
+        self.memory = [
+            m for m in self.memory
+            if "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" not in m.get("content", "")
+        ]
 
 
     async def process_logic(self, user_input, callback_voice_confirm):
@@ -197,7 +201,7 @@ class JarvisBrain:
         if previous_context != self.context and previous_context is not None:
             context_resume = self._resume_context()
             self._save_resume(context_resume, previous_context)
-            self._trim_memory()
+            self._clear_temporary_instructions()
             self._load_context()
 
         for _ in range(5):
@@ -212,28 +216,31 @@ class JarvisBrain:
             params = action.get("params")
 
             pro_skills = ["FileAppendSkill",  "FileCreateSkill", "FileReadSkill"]
-            if  skill_name in pro_skills:
-                self.model = self.pro_model
-            else:
-                self.model = self.basic_model
+            self.model = self.pro_model if skill_name in pro_skills else self.basic_model
 
             if skill_name:
                 if action.get("destructive"):
                     confirm = await callback_voice_confirm(clean_llm_response.get("message"))
                     if not confirm:
                         self.memory.append({"role": "tool", "content": "Ação cancelada pelo usuário."})
-                        self._trim_memory()
+                        self._clear_temporary_instructions()
                         continue
 
                 llm_result, skill_instruction = self._execute_skill(skill_name, params)
-                llm_feedback = f"Resultado da ação: {llm_result}"
+                llm_feedback = f"[RESULTADO DE {skill_name}] {llm_result}"
+
                 if skill_instruction:
                     self.memory.append({"role": "tool", "content": "[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA]" + skill_instruction})
+
                 self.memory.append({"role": "tool", "content": llm_feedback})
-                self._trim_memory()
+                self._clear_temporary_instructions()
 
             if clean_llm_response.get("finished"):
+                self._trim_memory()
                 return clean_llm_response.get("message", "Tarefa concluída.")
 
             if not skill_name and not clean_llm_response.get("finished"):
                 return "Erro de estado: O raciocínio foi interrompido sem uma conclusão clara."
+
+        self._trim_memory()  # ← adiciona aqui, fora do loop
+        return "Erro: número máximo de iterações atingido."
