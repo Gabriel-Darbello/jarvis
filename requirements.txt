@@ -1,7 +1,7 @@
-groq
 openWakeWord
 sounddevice
 webrtcvad-wheels
 edge-tts
 numpy
 scipy
+ollama
