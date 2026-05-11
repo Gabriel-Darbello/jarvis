@@ -4,6 +4,6 @@ webrtcvad-wheels
 edge-tts
 numpy
 scipy
-ollama
+groq
 psutil
 dotenv
