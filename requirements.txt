@@ -5,3 +5,5 @@ edge-tts
 numpy
 scipy
 ollama
+psutil
+dotenv
