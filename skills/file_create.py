@@ -18,6 +18,7 @@ class FileCreateSkill(BaseSkill):
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             if content is not None:
+                content = content.replace("\\n", "\n").replace("\\t", "\t")
                 with open(file_path, 'w', encoding='utf-8') as file:
                     file.write(content)
                 return f"Sucesso: O arquivo {file_path} foi criado com sucesso"
