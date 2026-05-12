@@ -140,7 +140,6 @@ class JarvisBrain:
         self._trim_memory()
         focus_app = GetFocusAppSkill().execute()
         self.memory.append({"role": "user", "content": user_input})
-        self.memory.append({"role": "user", "content": f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Janela em foco: {focus_app['resumo']}"})
 
         previous_context = self.context
         self._detect_context(user_input, focus_app)

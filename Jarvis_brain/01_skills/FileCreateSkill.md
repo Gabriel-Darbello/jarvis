@@ -11,6 +11,11 @@ Cria um arquivo em um caminho especificado, com ou sem conteúdo.
 - Só opera dentro das zonas permitidas: `~/Área de trabalho` e `~/programação/pessoal`
 - Sobrescreve o arquivo se já existir
 
+## Atenção ao conteúdo
+- Sempre use `\n` para quebras de linha no campo `content`
+- Nunca coloque o conteúdo em uma linha só
+- Para HTML, indente corretamente usando `\n` e `\t`
+
 ## Exemplo
 ```json
 {"skill_name": "FileCreateSkill", "params": {"file_path": "/home/gabriel/programação/pessoal/projeto/main.py", "content": "print('hello')"}}
