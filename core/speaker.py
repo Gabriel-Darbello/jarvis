@@ -11,7 +11,7 @@ async def speak(message):
 
     audio = elevenlabs.text_to_speech.convert(
         text=message,
-        voice_id="sohVtGi8uabdtvCHdl3b",
+        voice_id="z8nSmGenK7262wkXE6gb",
         model_id="eleven_v3",
         output_format="mp3_44100_128",
     )

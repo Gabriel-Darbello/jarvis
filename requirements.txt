@@ -1,9 +1,9 @@
 openWakeWord
 sounddevice
 webrtcvad-wheels
-edge-tts
+elevenlabs
 numpy
 scipy
 groq
 psutil
-dotenv
+python-dotenv

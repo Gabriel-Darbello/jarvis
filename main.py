@@ -17,7 +17,7 @@ async def main():
         while True:
             try:
                 model_v1 = await_wake_word(model_v1)
-                await speak("Olá como posso ajudar?")
+                await speak("Olá senhor, como posso ajudar?")
 
                 voice_command, model_v1 = record_command()
                 command = transcribe(voice_command)
