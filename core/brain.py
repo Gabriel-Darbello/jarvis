@@ -1,58 +1,19 @@
 from skills.__init__ import avaible_skills
 from groq import Groq
-from skills.get_focus_app import GetFocusAppSkill
 import json, re, time, os, dotenv
 
 class JarvisBrain:
     def __init__(self, max_memory = 5):
         with open("./Jarvis.md", "r", encoding="utf-8") as system_prompt:
             content = system_prompt.read()
-        self.context = None
-        self.memory = [{"role": "system", "content": content}]
         dotenv.load_dotenv()
+
+        self.memory = [{"role": "system", "content": content}]
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"
         self.max_memory = max_memory
         self.avaible_skills = avaible_skills
-        self.projects = os.listdir("./Jarvis_brain/02_projects")
 
-    def _detect_context(self, user_input, focus_app):
-        projects = self.projects
-        for project_md in projects:
-            project = project_md.replace(".md", "")
-            if project in user_input.lower():
-                self.context = project
-                return project
-
-            if project in focus_app["titulo"].lower():
-                self.context = project
-                return project
-
-        return None
-
-    def _resume_context(self):
-        with open("./Jarvis_brain/03_memory/memory_instruction.md", "r", encoding="utf-8") as f:
-            memory_instruction = f.read()
-        self.memory.append({"role":"user", "content":f"[INSTRUÇÕES TEMPORÁRIAS DO SISTEMA] Resuma essa conversa seguindo: {memory_instruction}"})
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages= self.memory,
-            temperature = 0.1,
-        )
-
-        return response.choices[0].message.content
-
-    def _save_resume(self, resume, previous_context):
-        with open(f"./Jarvis_brain/03_memory/{previous_context}.md", 'a', encoding='utf-8') as file:
-            file.write('\n' + resume)
-
-    def _load_context(self):
-        with open("./Jarvis.md", "r", encoding="utf-8") as system:
-            system_prompt = system.read()
-        with open(f"./Jarvis_brain/03_memory/{self.context}.md", "r", encoding="utf-8") as context:
-            context_prompt = context.read()
-
-        self.memory[0]["content"] = f"{system_prompt} \n {context_prompt}"
 
     def _get_llm_decision(self):
         try:
@@ -138,16 +99,7 @@ class JarvisBrain:
 
     async def process_logic(self, user_input, callback_voice_confirm):
         self._trim_memory()
-        focus_app = GetFocusAppSkill().execute()
         self.memory.append({"role": "user", "content": user_input})
-
-        previous_context = self.context
-        self._detect_context(user_input, focus_app)
-        if previous_context != self.context and previous_context is not None:
-            context_resume = self._resume_context()
-            self._save_resume(context_resume, previous_context)
-            self._clear_temporary_instructions()
-            self._load_context()
 
         for _ in range(5):
             llm_response = self._get_llm_decision()
