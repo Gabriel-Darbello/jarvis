@@ -7,3 +7,5 @@ scipy
 groq
 psutil
 python-dotenv
+langchain-text-splitters
+tiktoken
