@@ -6,6 +6,7 @@ from skills.file_write import FileAppendSkill
 from skills.folder_delete import FolderDeleteSkill
 from skills.get_focus_app import GetFocusAppSkill
 from skills.open_app import OpenAppSkill
+from skills.search_docs import SearchDocs
 
 avaible_skills = {
     CloseAppSkill,
@@ -15,7 +16,8 @@ avaible_skills = {
     FileAppendSkill,
     FolderDeleteSkill,
     GetFocusAppSkill,
-    OpenAppSkill
+    OpenAppSkill,
+    SearchDocs
 }
 
 list_dir = None
